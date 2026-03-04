@@ -59,7 +59,6 @@ const VehiclesPage: React.FC = () => {
   const textSecondary = darkMode ? 'text-gray-300' : 'text-gray-500';
   const inputBg = darkMode ? 'bg-[#0F172A] border-[#334155] text-gray-100 placeholder:text-gray-500' : 'bg-white border-gray-200 text-gray-900';
   const hoverBg = darkMode ? 'hover:bg-[#334155]/50' : 'hover:bg-gray-50';
-  const tableBg = darkMode ? 'bg-[#0F172A]' : 'bg-gray-50';
   const dividerColor = darkMode ? 'divide-[#334155]' : 'divide-gray-100';
 
   // Keyboard shortcuts

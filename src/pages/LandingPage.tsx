@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, CheckCircle, Camera, Bell, FileText, Wifi, WifiOff, Truck, HardHat, Cog, Wrench, ChevronRight, Star, Users, Clock, Award } from 'lucide-react';
+import { Shield, Camera, Bell, FileText, WifiOff, Truck, HardHat, Cog, Wrench, ChevronRight, Star, Users, Clock, Award } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
   return (
