@@ -773,7 +773,22 @@ const DriversPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Front Photo */}
               <div>
-                <p className={`${textSecondary} text-sm mb-2`}>Front</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className={`${textSecondary} text-sm`}>Front</p>
+                  {viewingPhotos.front && (
+                    <a
+                      href={viewingPhotos.front}
+                      download={`${editingDriver?.name || 'license'}_front.png`}
+                      className="text-xs px-2 py-1 rounded bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition flex items-center gap-1"
+                      data-testid="download-front-photo-btn"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download
+                    </a>
+                  )}
+                </div>
                 {viewingPhotos.front ? (
                   <img
                     src={viewingPhotos.front}
@@ -790,7 +805,22 @@ const DriversPage: React.FC = () => {
               
               {/* Back Photo */}
               <div>
-                <p className={`${textSecondary} text-sm mb-2`}>Back</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className={`${textSecondary} text-sm`}>Back</p>
+                  {viewingPhotos.back && (
+                    <a
+                      href={viewingPhotos.back}
+                      download={`${editingDriver?.name || 'license'}_back.png`}
+                      className="text-xs px-2 py-1 rounded bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition flex items-center gap-1"
+                      data-testid="download-back-photo-btn"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download
+                    </a>
+                  )}
+                </div>
                 {viewingPhotos.back ? (
                   <img
                     src={viewingPhotos.back}
