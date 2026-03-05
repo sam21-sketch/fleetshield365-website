@@ -48,6 +48,13 @@ export const driverAPI = {
   update: (id: string, data: any) => api.put(`/drivers/${id}`, data),
   delete: (id: string) => api.delete(`/drivers/${id}`),
   sendCredentials: (id: string) => api.post(`/drivers/${id}/send-credentials`),
+  // License photo operations (Owner only)
+  uploadLicensePhotos: (id: string, data: { front_photo_base64?: string; back_photo_base64?: string }) =>
+    api.post(`/drivers/${id}/license-photos`, data),
+  viewLicensePhotos: (id: string, password: string) =>
+    api.post(`/drivers/${id}/license-photos/view`, { password }),
+  deleteLicensePhotos: (id: string) => api.delete(`/drivers/${id}/license-photos`),
+  hasLicensePhotos: (id: string) => api.get(`/drivers/${id}/has-license-photos`),
 };
 
 export const inspectionAPI = {

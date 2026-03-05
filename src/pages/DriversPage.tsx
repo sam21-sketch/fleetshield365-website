@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { driverAPI } from '../utils/api';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import SlidePanel from '../components/SlidePanel';
 import EmptyState from '../components/EmptyState';
 import { showToast } from '../components/Toast';
@@ -24,6 +25,9 @@ interface Driver {
 
 const DriversPage: React.FC = () => {
   const { darkMode } = useTheme();
+  const { user } = useAuth();
+  const isOwner = user?.role === 'super_admin';
+  
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPanel, setShowPanel] = useState(false);
@@ -43,6 +47,19 @@ const DriversPage: React.FC = () => {
     password: '',
   });
   const [sendingCredentials, setSendingCredentials] = useState<string | null>(null);
+  
+  // License photo states
+  const [licensePhotoFront, setLicensePhotoFront] = useState<string | null>(null);
+  const [licensePhotoBack, setLicensePhotoBack] = useState<string | null>(null);
+  const [hasExistingPhotos, setHasExistingPhotos] = useState({ front: false, back: false });
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  
+  // Password verification modal for viewing photos
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
+  const [viewingPhotos, setViewingPhotos] = useState<{ front: string | null; back: string | null } | null>(null);
+  const [showPhotoViewer, setShowPhotoViewer] = useState(false);
 
   // Theme styles - Professional Dark Mode
   const cardBg = darkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-gray-100';
@@ -87,6 +104,10 @@ const DriversPage: React.FC = () => {
       dangerous_goods_expiry: '',
       password: '',
     });
+    // Reset license photo states
+    setLicensePhotoFront(null);
+    setLicensePhotoBack(null);
+    setHasExistingPhotos({ front: false, back: false });
   };
 
   const openAddPanel = () => {
@@ -94,7 +115,7 @@ const DriversPage: React.FC = () => {
     setShowPanel(true);
   };
 
-  const openEditPanel = (driver: Driver) => {
+  const openEditPanel = async (driver: Driver) => {
     setEditingDriver(driver);
     setFormData({
       name: driver.name,
@@ -110,6 +131,19 @@ const DriversPage: React.FC = () => {
       password: '',
     });
     setShowPanel(true);
+    
+    // Check for existing license photos (Owner only)
+    if (isOwner) {
+      try {
+        const response = await driverAPI.hasLicensePhotos(driver.id);
+        setHasExistingPhotos({
+          front: response.data.has_front_photo,
+          back: response.data.has_back_photo,
+        });
+      } catch {
+        setHasExistingPhotos({ front: false, back: false });
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -168,6 +202,89 @@ const DriversPage: React.FC = () => {
   const isExpired = (date?: string) => {
     if (!date) return false;
     return new Date(date) < new Date();
+  };
+
+  // License photo handling functions
+  const handlePhotoSelect = (type: 'front' | 'back') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast.error('Photo must be less than 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (type === 'front') {
+          setLicensePhotoFront(reader.result as string);
+        } else {
+          setLicensePhotoBack(reader.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadLicensePhotos = async () => {
+    if (!editingDriver || (!licensePhotoFront && !licensePhotoBack)) return;
+    
+    setUploadingPhotos(true);
+    try {
+      await driverAPI.uploadLicensePhotos(editingDriver.id, {
+        front_photo_base64: licensePhotoFront || undefined,
+        back_photo_base64: licensePhotoBack || undefined,
+      });
+      showToast.success('License photos uploaded successfully');
+      setHasExistingPhotos({
+        front: hasExistingPhotos.front || !!licensePhotoFront,
+        back: hasExistingPhotos.back || !!licensePhotoBack,
+      });
+      setLicensePhotoFront(null);
+      setLicensePhotoBack(null);
+    } catch (error: any) {
+      showToast.error(error.response?.data?.detail || 'Failed to upload photos');
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
+
+  const handleViewLicensePhotos = () => {
+    setPasswordInput('');
+    setShowPasswordModal(true);
+  };
+
+  const handleVerifyPasswordAndView = async () => {
+    if (!editingDriver || !passwordInput) return;
+    
+    setVerifyingPassword(true);
+    try {
+      const response = await driverAPI.viewLicensePhotos(editingDriver.id, passwordInput);
+      setViewingPhotos({
+        front: response.data.front_photo,
+        back: response.data.back_photo,
+      });
+      setShowPasswordModal(false);
+      setShowPhotoViewer(true);
+      setPasswordInput('');
+    } catch (error: any) {
+      showToast.error(error.response?.data?.detail || 'Invalid password');
+    } finally {
+      setVerifyingPassword(false);
+    }
+  };
+
+  const handleDeleteLicensePhotos = async () => {
+    if (!editingDriver) return;
+    if (!window.confirm('Are you sure you want to delete all license photos for this operator?')) return;
+    
+    try {
+      await driverAPI.deleteLicensePhotos(editingDriver.id);
+      showToast.success('License photos deleted');
+      setHasExistingPhotos({ front: false, back: false });
+      setViewingPhotos(null);
+      setShowPhotoViewer(false);
+    } catch (error: any) {
+      showToast.error(error.response?.data?.detail || 'Failed to delete photos');
+    }
   };
 
   if (loading) {
@@ -414,6 +531,123 @@ const DriversPage: React.FC = () => {
                 />
               </div>
             </div>
+            
+            {/* License Photos - Owner Only */}
+            {isOwner && editingDriver && (
+              <div className="mt-5 pt-4 border-t border-dashed border-[#334155]">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className={`${textPrimary} font-medium text-sm`}>License Photos (Secure)</h4>
+                  {(hasExistingPhotos.front || hasExistingPhotos.back) && (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleViewLicensePhotos}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition"
+                        data-testid="view-license-photos-btn"
+                      >
+                        View Photos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteLicensePhotos}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition"
+                        data-testid="delete-license-photos-btn"
+                      >
+                        Delete All
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Front Photo */}
+                  <div>
+                    <label className={`block text-xs ${textSecondary} mb-2`}>
+                      Front {hasExistingPhotos.front && <span className="text-green-400">(Uploaded)</span>}
+                    </label>
+                    <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-lg cursor-pointer transition ${
+                      licensePhotoFront 
+                        ? 'border-teal-500 bg-teal-500/10' 
+                        : darkMode ? 'border-[#334155] hover:border-[#475569] bg-[#0F172A]' : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+                    }`}>
+                      {licensePhotoFront ? (
+                        <div className="text-center">
+                          <svg className="w-8 h-8 mx-auto text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="text-xs text-teal-400 mt-1">Photo selected</span>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <svg className={`w-8 h-8 mx-auto ${textSecondary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className={`text-xs ${textSecondary} mt-1`}>Click to upload</span>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoSelect('front')}
+                        className="hidden"
+                        data-testid="license-photo-front-input"
+                      />
+                    </label>
+                  </div>
+                  
+                  {/* Back Photo */}
+                  <div>
+                    <label className={`block text-xs ${textSecondary} mb-2`}>
+                      Back {hasExistingPhotos.back && <span className="text-green-400">(Uploaded)</span>}
+                    </label>
+                    <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-lg cursor-pointer transition ${
+                      licensePhotoBack 
+                        ? 'border-teal-500 bg-teal-500/10' 
+                        : darkMode ? 'border-[#334155] hover:border-[#475569] bg-[#0F172A]' : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+                    }`}>
+                      {licensePhotoBack ? (
+                        <div className="text-center">
+                          <svg className="w-8 h-8 mx-auto text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="text-xs text-teal-400 mt-1">Photo selected</span>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <svg className={`w-8 h-8 mx-auto ${textSecondary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className={`text-xs ${textSecondary} mt-1`}>Click to upload</span>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoSelect('back')}
+                        className="hidden"
+                        data-testid="license-photo-back-input"
+                      />
+                    </label>
+                  </div>
+                </div>
+                
+                {(licensePhotoFront || licensePhotoBack) && (
+                  <button
+                    type="button"
+                    onClick={handleUploadLicensePhotos}
+                    disabled={uploadingPhotos}
+                    className="mt-3 w-full py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-teal-500/50 text-white text-sm font-medium rounded-lg transition"
+                    data-testid="upload-license-photos-btn"
+                  >
+                    {uploadingPhotos ? 'Uploading...' : 'Upload License Photos'}
+                  </button>
+                )}
+                
+                <p className={`text-xs ${textSecondary} mt-2`}>
+                  Only you (Company Owner) can view these photos. Password required to access.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Certifications Section */}
@@ -479,6 +713,116 @@ const DriversPage: React.FC = () => {
           </div>
         </form>
       </SlidePanel>
+
+      {/* Password Verification Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className={`${darkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-gray-200'} border rounded-xl p-6 w-full max-w-sm mx-4 shadow-2xl`}>
+            <h3 className={`${textPrimary} font-semibold text-lg mb-2`}>Verify Password</h3>
+            <p className={`${textSecondary} text-sm mb-4`}>Enter your password to view license photos</p>
+            
+            <input
+              type="password"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              placeholder="Enter your password"
+              className={`w-full ${inputBg} border rounded-lg px-4 py-2.5 mb-4 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none`}
+              data-testid="password-verify-input"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleVerifyPasswordAndView()}
+            />
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowPasswordModal(false); setPasswordInput(''); }}
+                className={`flex-1 py-2.5 rounded-lg font-medium ${darkMode ? 'bg-[#334155] hover:bg-[#475569] text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleVerifyPasswordAndView}
+                disabled={verifyingPassword || !passwordInput}
+                className="flex-1 py-2.5 bg-teal-500 hover:bg-teal-600 disabled:bg-teal-500/50 text-white rounded-lg font-medium"
+                data-testid="password-verify-btn"
+              >
+                {verifyingPassword ? 'Verifying...' : 'View Photos'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Viewer Modal */}
+      {showPhotoViewer && viewingPhotos && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className={`${darkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-gray-200'} border rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-auto shadow-2xl`}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className={`${textPrimary} font-semibold text-lg`}>
+                License Photos - {editingDriver?.name}
+              </h3>
+              <button
+                onClick={() => { setShowPhotoViewer(false); setViewingPhotos(null); }}
+                className={`p-2 rounded-lg ${darkMode ? 'hover:bg-[#334155]' : 'hover:bg-gray-100'}`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Front Photo */}
+              <div>
+                <p className={`${textSecondary} text-sm mb-2`}>Front</p>
+                {viewingPhotos.front ? (
+                  <img
+                    src={viewingPhotos.front}
+                    alt="License Front"
+                    className="w-full rounded-lg border border-[#334155]"
+                    data-testid="license-photo-front-view"
+                  />
+                ) : (
+                  <div className={`w-full h-48 flex items-center justify-center rounded-lg ${darkMode ? 'bg-[#0F172A] border-[#334155]' : 'bg-gray-50 border-gray-200'} border`}>
+                    <p className={textSecondary}>No front photo</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Back Photo */}
+              <div>
+                <p className={`${textSecondary} text-sm mb-2`}>Back</p>
+                {viewingPhotos.back ? (
+                  <img
+                    src={viewingPhotos.back}
+                    alt="License Back"
+                    className="w-full rounded-lg border border-[#334155]"
+                    data-testid="license-photo-back-view"
+                  />
+                ) : (
+                  <div className={`w-full h-48 flex items-center justify-center rounded-lg ${darkMode ? 'bg-[#0F172A] border-[#334155]' : 'bg-gray-50 border-gray-200'} border`}>
+                    <p className={textSecondary}>No back photo</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-[#334155] flex justify-end gap-3">
+              <button
+                onClick={handleDeleteLicensePhotos}
+                className="px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg text-sm font-medium"
+              >
+                Delete Photos
+              </button>
+              <button
+                onClick={() => { setShowPhotoViewer(false); setViewingPhotos(null); }}
+                className="px-4 py-2 bg-[#334155] hover:bg-[#475569] text-white rounded-lg text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

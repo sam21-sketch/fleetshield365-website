@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, CheckCircle, Star, Eye, EyeOff } from 'lucide-react';
+import { Shield, CheckCircle, Star, Eye, EyeOff, Building2, Crown } from 'lucide-react';
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
 
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'owner'>('owner');
   const [formData, setFormData] = useState({
     company_name: '',
     name: '',
     email: '',
     password: '',
     confirm_password: '',
-    vehicle_count: 5, // Still used internally but not shown
+    vehicle_count: 5,
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,6 +52,7 @@ const RegisterPage: React.FC = () => {
         email: formData.email,
         password: formData.password,
         vehicle_count: formData.vehicle_count,
+        role: selectedRole === 'owner' ? 'super_admin' : 'admin',
       });
       
       // Free model - go straight to dashboard
@@ -93,6 +95,66 @@ const RegisterPage: React.FC = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Role Selection */}
+            <div>
+              <label className="block text-slate-300 text-sm mb-3">I am registering as:</label>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Company Owner Option */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole('owner')}
+                  data-testid="role-owner-btn"
+                  className={`relative p-4 rounded-xl border-2 transition-all text-left ${
+                    selectedRole === 'owner'
+                      ? 'border-teal-500 bg-teal-500/10'
+                      : 'border-[#334155] bg-[#0F172A] hover:border-[#475569]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`p-2 rounded-lg ${selectedRole === 'owner' ? 'bg-teal-500/20' : 'bg-[#334155]'}`}>
+                      <Crown className={`w-5 h-5 ${selectedRole === 'owner' ? 'text-teal-400' : 'text-slate-400'}`} />
+                    </div>
+                    <span className={`font-semibold ${selectedRole === 'owner' ? 'text-white' : 'text-slate-300'}`}>
+                      Company Owner
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">Full access including billing & sensitive documents</p>
+                  {selectedRole === 'owner' && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle className="w-5 h-5 text-teal-400" />
+                    </div>
+                  )}
+                </button>
+
+                {/* Admin Option */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole('admin')}
+                  data-testid="role-admin-btn"
+                  className={`relative p-4 rounded-xl border-2 transition-all text-left ${
+                    selectedRole === 'admin'
+                      ? 'border-teal-500 bg-teal-500/10'
+                      : 'border-[#334155] bg-[#0F172A] hover:border-[#475569]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`p-2 rounded-lg ${selectedRole === 'admin' ? 'bg-teal-500/20' : 'bg-[#334155]'}`}>
+                      <Building2 className={`w-5 h-5 ${selectedRole === 'admin' ? 'text-teal-400' : 'text-slate-400'}`} />
+                    </div>
+                    <span className={`font-semibold ${selectedRole === 'admin' ? 'text-white' : 'text-slate-300'}`}>
+                      Admin
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">Manage fleet, operators & reports</p>
+                  {selectedRole === 'admin' && (
+                    <div className="absolute top-2 right-2">
+                      <CheckCircle className="w-5 h-5 text-teal-400" />
+                    </div>
+                  )}
+                </button>
+              </div>
+            </div>
+
             {/* Company Info */}
             <div>
               <label className="block text-slate-300 text-sm mb-2" htmlFor="company_name">Company Name</label>

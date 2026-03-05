@@ -18,6 +18,15 @@ interface Company {
   max_vehicles: number;
 }
 
+interface RegisterData {
+  email: string;
+  password: string;
+  name: string;
+  company_name: string;
+  vehicle_count: number;
+  role?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   company: Company | null;
@@ -26,14 +35,6 @@ interface AuthContextType {
   register: (data: RegisterData) => Promise<{ checkout_url: string }>;
   logout: () => void;
   refreshCompany: () => Promise<void>;
-}
-
-interface RegisterData {
-  email: string;
-  password: string;
-  name: string;
-  company_name: string;
-  vehicle_count: number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
