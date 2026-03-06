@@ -31,7 +31,7 @@ interface AuthContextType {
   user: User | null;
   company: Company | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (emailOrUsername: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (data: RegisterData) => Promise<{ checkout_url: string }>;
   logout: () => void;
   refreshCompany: () => Promise<void>;
@@ -65,8 +65,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const login = async (email: string, password: string) => {
-    const response = await api.post('/auth/login', { email, password });
+  const login = async (emailOrUsername: string, password: string, rememberMe: boolean = false) => {
+    const response = await api.post('/auth/login', { 
+      email: emailOrUsername, 
+      password,
+      remember_me: rememberMe 
+    });
     localStorage.setItem('token', response.data.access_token);
     await fetchUser();
   };

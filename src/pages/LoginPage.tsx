@@ -6,11 +6,12 @@ import { Eye, EyeOff } from 'lucide-react';
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,10 +19,10 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(emailOrUsername, password, rememberMe);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid email or password');
+      setError(err.response?.data?.detail || 'Invalid credentials');
     } finally {
       setLoading(false);
     }
@@ -52,14 +53,14 @@ const LoginPage: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-gray-700 mb-2 font-medium" htmlFor="email">Email</label>
+              <label className="block text-gray-700 mb-2 font-medium" htmlFor="emailOrUsername">Email or Username</label>
               <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                id="emailOrUsername"
+                value={emailOrUsername}
+                onChange={(e) => setEmailOrUsername(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition"
-                placeholder="admin@company.com"
+                placeholder="admin@company.com or username"
                 required
               />
             </div>
@@ -89,6 +90,19 @@ const LoginPage: React.FC = () => {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+              />
+              <label htmlFor="rememberMe" className="ml-2 text-gray-600 text-sm">
+                Keep me logged in
+              </label>
             </div>
 
             <button
