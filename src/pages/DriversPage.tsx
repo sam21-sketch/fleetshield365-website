@@ -122,7 +122,7 @@ const DriversPage: React.FC = () => {
     setEditingDriver(driver);
     setFormData({
       name: driver.name,
-      email: driver.email,
+      email: driver.email || '',
       phone: driver.phone || '',
       license_number: driver.license_number || '',
       license_class: driver.license_class || '',
@@ -132,6 +132,7 @@ const DriversPage: React.FC = () => {
       forklift_license_expiry: driver.forklift_license_expiry || '',
       dangerous_goods_expiry: driver.dangerous_goods_expiry || '',
       password: '',
+      auto_generate_username: false, // Don't show for editing
     });
     setShowPanel(true);
     
