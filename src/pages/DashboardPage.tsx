@@ -5,6 +5,13 @@ import { useTheme } from '../contexts/ThemeContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { DashboardSkeleton } from '../components/Skeleton';
 
+interface ExpiringVehicle {
+  name: string;
+  rego_expiry?: string;
+  insurance_expiry?: string;
+  coi_expiry?: string;
+}
+
 interface Stats {
   total_vehicles: number;
   total_drivers: number;
@@ -23,6 +30,10 @@ interface Stats {
   drivers_training_expiring?: number;
   drivers_training_expired?: number;
   vehicles_needing_attention?: number;
+  // Expiring vehicle names
+  rego_expiring_vehicles?: ExpiringVehicle[];
+  insurance_expiring_vehicles?: ExpiringVehicle[];
+  coi_expiring_vehicles?: ExpiringVehicle[];
 }
 
 interface Alert {
@@ -200,9 +211,18 @@ const DashboardPage: React.FC = () => {
             {(stats?.expiring_soon || 0) + (stats?.drivers_license_expiring || 0) + (stats?.drivers_license_expired || 0)}
           </div>
           <div className={`${textSecondary} text-sm`}>Expiring/Expired</div>
-          {(stats?.drivers_license_expired || 0) > 0 && (
-            <div className="text-red-500 text-xs mt-1">{stats?.drivers_license_expired} license expired</div>
-          )}
+          {/* Show quick summary of what's expiring */}
+          <div className="text-xs mt-1 space-y-0.5">
+            {(stats?.upcoming_rego_expiry || 0) > 0 && (
+              <div className="text-orange-500">{stats?.upcoming_rego_expiry} rego</div>
+            )}
+            {(stats?.upcoming_coi_expiry || 0) > 0 && (
+              <div className="text-orange-500">{stats?.upcoming_coi_expiry} COI</div>
+            )}
+            {(stats?.drivers_license_expired || 0) > 0 && (
+              <div className="text-red-500">{stats?.drivers_license_expired} license expired</div>
+            )}
+          </div>
         </Link>
       </div>
 
@@ -215,30 +235,47 @@ const DashboardPage: React.FC = () => {
             </svg>
             Expiry Alerts
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Equipment Expiries */}
-            {(stats?.upcoming_rego_expiry || 0) > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Rego Expiring - Show Equipment Names */}
+            {stats?.rego_expiring_vehicles && stats.rego_expiring_vehicles.length > 0 && (
               <div className={`p-4 rounded-lg ${darkMode ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
-                <div className="text-orange-500 font-bold text-xl">{stats?.upcoming_rego_expiry}</div>
-                <div className={`${textSecondary} text-sm`}>Rego Expiring</div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-orange-500 font-bold text-sm">Rego Expiring</div>
+                  <span className="text-orange-500 text-xs">{stats.rego_expiring_vehicles.length} items</span>
+                </div>
+                {stats.rego_expiring_vehicles.map((v, i) => (
+                  <div key={i} className={`${textPrimary} text-sm py-1 border-t ${darkMode ? 'border-orange-500/20' : 'border-orange-100'}`}>
+                    {v.name} <span className={`${textSecondary} text-xs`}>({v.rego_expiry})</span>
+                  </div>
+                ))}
               </div>
             )}
-            {(stats?.upcoming_insurance_expiry || 0) > 0 && (
+            {/* Insurance Expiring - Show Equipment Names */}
+            {stats?.insurance_expiring_vehicles && stats.insurance_expiring_vehicles.length > 0 && (
               <div className={`p-4 rounded-lg ${darkMode ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
-                <div className="text-orange-500 font-bold text-xl">{stats?.upcoming_insurance_expiry}</div>
-                <div className={`${textSecondary} text-sm`}>Insurance Expiring</div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-orange-500 font-bold text-sm">Insurance Expiring</div>
+                  <span className="text-orange-500 text-xs">{stats.insurance_expiring_vehicles.length} items</span>
+                </div>
+                {stats.insurance_expiring_vehicles.map((v, i) => (
+                  <div key={i} className={`${textPrimary} text-sm py-1 border-t ${darkMode ? 'border-orange-500/20' : 'border-orange-100'}`}>
+                    {v.name} <span className={`${textSecondary} text-xs`}>({v.insurance_expiry})</span>
+                  </div>
+                ))}
               </div>
             )}
-            {(stats?.upcoming_safety_cert_expiry || 0) > 0 && (
+            {/* COI Expiring - Show Equipment Names */}
+            {stats?.coi_expiring_vehicles && stats.coi_expiring_vehicles.length > 0 && (
               <div className={`p-4 rounded-lg ${darkMode ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
-                <div className="text-orange-500 font-bold text-xl">{stats?.upcoming_safety_cert_expiry}</div>
-                <div className={`${textSecondary} text-sm`}>Safety Cert Expiring</div>
-              </div>
-            )}
-            {(stats?.upcoming_coi_expiry || 0) > 0 && (
-              <div className={`p-4 rounded-lg ${darkMode ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
-                <div className="text-orange-500 font-bold text-xl">{stats?.upcoming_coi_expiry}</div>
-                <div className={`${textSecondary} text-sm`}>COI Expiring</div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-orange-500 font-bold text-sm">COI Expiring</div>
+                  <span className="text-orange-500 text-xs">{stats.coi_expiring_vehicles.length} items</span>
+                </div>
+                {stats.coi_expiring_vehicles.map((v, i) => (
+                  <div key={i} className={`${textPrimary} text-sm py-1 border-t ${darkMode ? 'border-orange-500/20' : 'border-orange-100'}`}>
+                    {v.name} <span className={`${textSecondary} text-xs`}>({v.coi_expiry})</span>
+                  </div>
+                ))}
               </div>
             )}
             {/* Driver Expiries */}
