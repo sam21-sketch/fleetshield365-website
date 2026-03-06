@@ -24,6 +24,7 @@ import SettingsPage from './pages/SettingsPage';
 import SubscriptionPage from './pages/SubscriptionPage';
 import UsersPage from './pages/UsersPage';
 import HelpPage from './pages/HelpPage';
+import ExpiryPage from './pages/ExpiryPage';
 
 // Layout
 import DashboardLayout from './components/DashboardLayout';
@@ -74,6 +75,13 @@ function App() {
             <ProtectedRoute>
               <DashboardLayout>
                 <VehiclesPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/expiry" element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <ExpiryPage />
               </DashboardLayout>
             </ProtectedRoute>
           } />

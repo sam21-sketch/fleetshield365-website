@@ -192,7 +192,7 @@ const DashboardPage: React.FC = () => {
           <div className={`${textSecondary} text-sm`}>Fuel This Month</div>
         </Link>
 
-        <Link to="/vehicles" className={`${cardBg} rounded-xl p-5 hover:shadow-md transition-all group border`}>
+        <Link to="/expiry" className={`${cardBg} rounded-xl p-5 hover:shadow-md transition-all group border`}>
           <div className="flex items-center justify-between mb-3">
             <div className={`w-10 h-10 ${(stats?.expiring_soon || 0) > 0 || (stats?.drivers_license_expired || 0) > 0
               ? (darkMode ? 'bg-orange-500/20' : 'bg-orange-50') 
