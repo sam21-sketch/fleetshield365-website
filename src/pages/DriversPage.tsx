@@ -481,27 +481,29 @@ const DriversPage: React.FC = () => {
 
           {/* Auto-generate username toggle */}
           {!editingDriver && (
-            <div className={`p-3 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'}`}>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="auto_generate_username"
-                  checked={formData.auto_generate_username}
-                  onChange={(e) => setFormData({ ...formData, auto_generate_username: e.target.checked })}
-                  className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
-                />
-                <label htmlFor="auto_generate_username" className={`ml-2 ${textPrimary} text-sm`}>
-                  Auto-generate username (driver can login without email)
-                </label>
-              </div>
-              {formData.auto_generate_username && formData.name && (
-                <div className={`mt-2 ml-6 text-sm`}>
-                  <span className={textSecondary}>Username will be: </span>
-                  <span className="text-cyan-500 font-medium">
-                    @{formData.name.toLowerCase().replace(/[^a-z0-9]/g, '.').replace(/\.+/g, '.').replace(/^\.+|\.+$/g, '')}
-                  </span>
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} border ${darkMode ? 'border-[#334155]' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="auto_generate_username"
+                    checked={formData.auto_generate_username}
+                    onChange={(e) => setFormData({ ...formData, auto_generate_username: e.target.checked })}
+                    className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+                  />
+                  <label htmlFor="auto_generate_username" className={`ml-2 ${textPrimary} text-sm font-medium`}>
+                    Auto-generate username
+                  </label>
                 </div>
-              )}
+                {formData.auto_generate_username && formData.name && (
+                  <div className={`px-3 py-1.5 rounded-lg ${darkMode ? 'bg-cyan-500/20' : 'bg-cyan-50'} border ${darkMode ? 'border-cyan-500/30' : 'border-cyan-200'}`}>
+                    <span className="text-cyan-500 font-medium text-sm">
+                      @{formData.name.toLowerCase().replace(/[^a-z0-9]/g, '.').replace(/\.+/g, '.').replace(/^\.+|\.+$/g, '')}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <p className={`${textSecondary} text-xs mt-1.5 ml-6`}>Driver can login with this username instead of email</p>
             </div>
           )}
 
