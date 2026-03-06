@@ -344,7 +344,7 @@ const DriversPage: React.FC = () => {
             <thead className={tableBg}>
               <tr>
                 <th className={`text-left ${textSecondary} font-medium px-6 py-4`}>Name</th>
-                <th className={`text-left ${textSecondary} font-medium px-6 py-4`}>Email</th>
+                <th className={`text-left ${textSecondary} font-medium px-6 py-4`}>Email / Username</th>
                 <th className={`text-left ${textSecondary} font-medium px-6 py-4`}>License #</th>
                 <th className={`text-left ${textSecondary} font-medium px-6 py-4`}>License Expiry</th>
                 <th className={`text-left ${textSecondary} font-medium px-6 py-4`}>Actions</th>
@@ -404,7 +404,9 @@ const DriversPage: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <div className={`${textPrimary} font-medium`}>{driver.name}</div>
-                  <div className={`${textSecondary} text-sm`}>{driver.email}</div>
+                  <div className={`${textSecondary} text-sm`}>
+                    {driver.email || <span className="text-cyan-400">@{driver.username}</span>}
+                  </div>
                 </div>
                 <span className={`px-2 py-1 rounded text-xs ${
                   isExpired(driver.license_expiry) ? 'bg-red-500/20 text-red-400' :
