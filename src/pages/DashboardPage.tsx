@@ -13,6 +13,16 @@ interface Stats {
   issues_today: number;
   fuel_this_month: number;
   expiring_soon: number;
+  // Detailed expiry fields
+  upcoming_rego_expiry?: number;
+  upcoming_insurance_expiry?: number;
+  upcoming_safety_cert_expiry?: number;
+  upcoming_coi_expiry?: number;
+  drivers_license_expiring?: number;
+  drivers_license_expired?: number;
+  drivers_training_expiring?: number;
+  drivers_training_expired?: number;
+  vehicles_needing_attention?: number;
 }
 
 interface Alert {
@@ -173,10 +183,10 @@ const DashboardPage: React.FC = () => {
 
         <Link to="/vehicles" className={`${cardBg} rounded-xl p-5 hover:shadow-md transition-all group border`}>
           <div className="flex items-center justify-between mb-3">
-            <div className={`w-10 h-10 ${(stats?.expiring_soon || 0) > 0 
+            <div className={`w-10 h-10 ${(stats?.expiring_soon || 0) > 0 || (stats?.drivers_license_expired || 0) > 0
               ? (darkMode ? 'bg-orange-500/20' : 'bg-orange-50') 
               : (darkMode ? 'bg-[#334155]' : 'bg-gray-50')} rounded-lg flex items-center justify-center`}>
-              <svg className={`w-5 h-5 ${(stats?.expiring_soon || 0) > 0 
+              <svg className={`w-5 h-5 ${(stats?.expiring_soon || 0) > 0 || (stats?.drivers_license_expired || 0) > 0
                 ? (darkMode ? 'text-orange-400' : 'text-orange-500') 
                 : textSecondary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -186,10 +196,79 @@ const DashboardPage: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </div>
-          <div className={`text-2xl font-bold ${textPrimary}`}>{stats?.expiring_soon || 0}</div>
-          <div className={`${textSecondary} text-sm`}>Expiring Soon</div>
+          <div className={`text-2xl font-bold ${textPrimary}`}>
+            {(stats?.expiring_soon || 0) + (stats?.drivers_license_expiring || 0) + (stats?.drivers_license_expired || 0)}
+          </div>
+          <div className={`${textSecondary} text-sm`}>Expiring/Expired</div>
+          {(stats?.drivers_license_expired || 0) > 0 && (
+            <div className="text-red-500 text-xs mt-1">{stats?.drivers_license_expired} license expired</div>
+          )}
         </Link>
       </div>
+
+      {/* Expiry Details Section */}
+      {((stats?.expiring_soon || 0) > 0 || (stats?.drivers_license_expiring || 0) > 0 || (stats?.drivers_license_expired || 0) > 0 || (stats?.drivers_training_expired || 0) > 0) && (
+        <div className={`${cardBg} rounded-xl border p-5`}>
+          <h2 className={`text-lg font-semibold ${textPrimary} mb-4 flex items-center gap-2`}>
+            <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Expiry Alerts
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Equipment Expiries */}
+            {(stats?.upcoming_rego_expiry || 0) > 0 && (
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
+                <div className="text-orange-500 font-bold text-xl">{stats?.upcoming_rego_expiry}</div>
+                <div className={`${textSecondary} text-sm`}>Rego Expiring</div>
+              </div>
+            )}
+            {(stats?.upcoming_insurance_expiry || 0) > 0 && (
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
+                <div className="text-orange-500 font-bold text-xl">{stats?.upcoming_insurance_expiry}</div>
+                <div className={`${textSecondary} text-sm`}>Insurance Expiring</div>
+              </div>
+            )}
+            {(stats?.upcoming_safety_cert_expiry || 0) > 0 && (
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
+                <div className="text-orange-500 font-bold text-xl">{stats?.upcoming_safety_cert_expiry}</div>
+                <div className={`${textSecondary} text-sm`}>Safety Cert Expiring</div>
+              </div>
+            )}
+            {(stats?.upcoming_coi_expiry || 0) > 0 && (
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
+                <div className="text-orange-500 font-bold text-xl">{stats?.upcoming_coi_expiry}</div>
+                <div className={`${textSecondary} text-sm`}>COI Expiring</div>
+              </div>
+            )}
+            {/* Driver Expiries */}
+            {(stats?.drivers_license_expired || 0) > 0 && (
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-red-500/10' : 'bg-red-50'}`}>
+                <div className="text-red-500 font-bold text-xl">{stats?.drivers_license_expired}</div>
+                <div className={`${textSecondary} text-sm`}>License EXPIRED</div>
+              </div>
+            )}
+            {(stats?.drivers_license_expiring || 0) > 0 && (
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
+                <div className="text-orange-500 font-bold text-xl">{stats?.drivers_license_expiring}</div>
+                <div className={`${textSecondary} text-sm`}>License Expiring</div>
+              </div>
+            )}
+            {(stats?.drivers_training_expired || 0) > 0 && (
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-red-500/10' : 'bg-red-50'}`}>
+                <div className="text-red-500 font-bold text-xl">{stats?.drivers_training_expired}</div>
+                <div className={`${textSecondary} text-sm`}>Training EXPIRED</div>
+              </div>
+            )}
+            {(stats?.drivers_training_expiring || 0) > 0 && (
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-orange-500/10' : 'bg-orange-50'}`}>
+                <div className="text-orange-500 font-bold text-xl">{stats?.drivers_training_expiring}</div>
+                <div className={`${textSecondary} text-sm`}>Training Expiring</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Charts Section */}
       <div className="grid lg:grid-cols-2 gap-6">
