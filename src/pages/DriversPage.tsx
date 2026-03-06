@@ -11,7 +11,8 @@ import { SkeletonTable } from '../components/Skeleton';
 interface Driver {
   id: string;
   name: string;
-  email: string;
+  email?: string;
+  username?: string;
   phone?: string;
   license_number?: string;
   license_class?: string;
@@ -45,6 +46,7 @@ const DriversPage: React.FC = () => {
     forklift_license_expiry: '',
     dangerous_goods_expiry: '',
     password: '',
+    auto_generate_username: true,
   });
   const [sendingCredentials, setSendingCredentials] = useState<string | null>(null);
   
@@ -103,6 +105,7 @@ const DriversPage: React.FC = () => {
       forklift_license_expiry: '',
       dangerous_goods_expiry: '',
       password: '',
+      auto_generate_username: true,
     });
     // Reset license photo states
     setLicensePhotoFront(null);
@@ -154,8 +157,18 @@ const DriversPage: React.FC = () => {
         await driverAPI.update(editingDriver.id, formData);
         showToast.success(`Driver "${formData.name}" updated successfully`);
       } else {
-        await driverAPI.create({ ...formData, role: 'driver' });
-        showToast.success(`Driver "${formData.name}" added successfully`);
+        const payload = {
+          ...formData,
+          role: 'driver',
+          email: formData.email || undefined, // Don't send empty string
+        };
+        const response = await driverAPI.create(payload);
+        const username = response.data?.username;
+        if (username) {
+          showToast.success(`Driver "${formData.name}" added! Username: ${username}`);
+        } else {
+          showToast.success(`Driver "${formData.name}" added successfully`);
+        }
       }
       fetchDrivers();
       setShowPanel(false);
@@ -340,7 +353,7 @@ const DriversPage: React.FC = () => {
               {drivers.map((driver) => (
                 <tr key={driver.id} className={hoverBg}>
                   <td className={`px-6 py-4 ${textPrimary} font-medium`}>{driver.name}</td>
-                  <td className={`px-6 py-4 ${textPrimary}`}>{driver.email}</td>
+                  <td className={`px-6 py-4 ${textPrimary}`}>{driver.email || <span className="text-cyan-400 text-sm">@{driver.username}</span>}</td>
                   <td className={`px-6 py-4 ${textPrimary}`}>{driver.license_number || <span className={`${darkMode ? 'text-gray-400' : 'text-gray-400'} italic`}>Not set</span>}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded text-sm ${
@@ -447,7 +460,10 @@ const DriversPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>Email *</label>
+              <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>
+                Email {!formData.auto_generate_username && '*'}
+                {formData.auto_generate_username && <span className="text-gray-400 font-normal">(Optional)</span>}
+              </label>
               <input
                 type="email"
                 value={formData.email}
@@ -455,10 +471,26 @@ const DriversPage: React.FC = () => {
                 className={`w-full ${inputBg} border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
                 placeholder="driver@company.com"
                 data-testid="driver-email-input"
-                required
+                required={!formData.auto_generate_username}
               />
             </div>
           </div>
+
+          {/* Auto-generate username toggle */}
+          {!editingDriver && (
+            <div className={`flex items-center p-3 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'}`}>
+              <input
+                type="checkbox"
+                id="auto_generate_username"
+                checked={formData.auto_generate_username}
+                onChange={(e) => setFormData({ ...formData, auto_generate_username: e.target.checked })}
+                className="w-4 h-4 text-cyan-600 border-gray-300 rounded focus:ring-cyan-500"
+              />
+              <label htmlFor="auto_generate_username" className={`ml-2 ${textPrimary} text-sm`}>
+                Auto-generate username (driver can login without email)
+              </label>
+            </div>
+          )}
 
           {!editingDriver && (
             <div>
