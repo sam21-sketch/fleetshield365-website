@@ -26,7 +26,8 @@ interface Driver {
   id: string;
   name?: string;
   full_name?: string;
-  email: string;
+  email?: string;
+  username?: string;
 }
 
 const VehiclesPage: React.FC = () => {
@@ -51,6 +52,7 @@ const VehiclesPage: React.FC = () => {
     safety_certificate_expiry: '',
     coi_expiry: '',
     service_due_km: '',
+    assigned_driver_ids: [] as string[],
   });
 
   // Theme styles - Professional Dark Mode with better contrast
@@ -96,6 +98,7 @@ const VehiclesPage: React.FC = () => {
       safety_certificate_expiry: '',
       coi_expiry: '',
       service_due_km: '',
+      assigned_driver_ids: [],
     });
     setShowPanel(true);
   };
@@ -112,6 +115,7 @@ const VehiclesPage: React.FC = () => {
       safety_certificate_expiry: vehicle.safety_certificate_expiry || '',
       coi_expiry: vehicle.coi_expiry || '',
       service_due_km: vehicle.service_due_km?.toString() || '',
+      assigned_driver_ids: vehicle.assigned_driver_ids || [],
     });
     setShowPanel(true);
   };
@@ -456,6 +460,62 @@ const VehiclesPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Assign Operators Section */}
+          <div className={`border-t ${darkMode ? 'border-[#334155]' : 'border-gray-200'} pt-5`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-sm font-semibold ${textPrimary}`}>Assign Operators</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  if (formData.assigned_driver_ids.length === drivers.length) {
+                    setFormData({ ...formData, assigned_driver_ids: [] });
+                  } else {
+                    setFormData({ ...formData, assigned_driver_ids: drivers.map(d => d.id) });
+                  }
+                }}
+                className={`text-xs px-3 py-1.5 rounded-lg ${
+                  formData.assigned_driver_ids.length === drivers.length && drivers.length > 0
+                    ? 'bg-cyan-500/20 text-cyan-400'
+                    : darkMode ? 'bg-[#334155] text-gray-300' : 'bg-gray-100 text-gray-600'
+                } hover:opacity-80 transition`}
+              >
+                {formData.assigned_driver_ids.length === drivers.length && drivers.length > 0 ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+            <div className={`border ${darkMode ? 'border-[#334155]' : 'border-gray-200'} rounded-lg divide-y ${darkMode ? 'divide-[#334155]' : 'divide-gray-100'} max-h-40 overflow-y-auto`}>
+              {drivers.length === 0 ? (
+                <div className={`p-4 text-center ${textSecondary} text-sm`}>No operators available</div>
+              ) : (
+                drivers.map((driver) => (
+                  <label
+                    key={driver.id}
+                    className={`flex items-center gap-3 p-3 cursor-pointer ${hoverBg} transition`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.assigned_driver_ids.includes(driver.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData({ ...formData, assigned_driver_ids: [...formData.assigned_driver_ids, driver.id] });
+                        } else {
+                          setFormData({ ...formData, assigned_driver_ids: formData.assigned_driver_ids.filter(id => id !== driver.id) });
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 text-cyan-500 focus:ring-cyan-500"
+                    />
+                    <div>
+                      <div className={`${textPrimary} text-sm`}>{driver.name}</div>
+                      <div className={`text-xs ${textSecondary}`}>{driver.email || `@${driver.username}`}</div>
+                    </div>
+                  </label>
+                ))
+              )}
+            </div>
+            <div className={`text-xs ${textSecondary} mt-2`}>
+              {formData.assigned_driver_ids.length} operator{formData.assigned_driver_ids.length !== 1 ? 's' : ''} selected
+            </div>
+          </div>
+
           <div className={`flex gap-3 pt-4 border-t ${darkMode ? 'border-[#334155]' : 'border-gray-200'}`}>
             <button
               type="button"
@@ -498,6 +558,34 @@ const VehiclesPage: React.FC = () => {
               placeholder="Search drivers..."
               className={`w-full pl-10 pr-4 py-2.5 ${inputBg} border rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
             />
+          </div>
+
+          {/* Select All Toggle */}
+          <div className={`flex items-center justify-between p-3 ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} rounded-lg`}>
+            <span className={`${textPrimary} font-medium text-sm`}>Select All Operators</span>
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedDrivers.length === filteredDrivers.length) {
+                  setSelectedDrivers([]);
+                } else {
+                  setSelectedDrivers(filteredDrivers.map(d => d.id));
+                }
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                selectedDrivers.length === filteredDrivers.length && filteredDrivers.length > 0
+                  ? 'bg-cyan-500' 
+                  : darkMode ? 'bg-[#334155]' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  selectedDrivers.length === filteredDrivers.length && filteredDrivers.length > 0
+                    ? 'translate-x-6' 
+                    : 'translate-x-1'
+                }`}
+              />
+            </button>
           </div>
 
           {/* Driver List */}
