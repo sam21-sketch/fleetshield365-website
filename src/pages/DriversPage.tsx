@@ -41,9 +41,22 @@ const DriversPage: React.FC = () => {
     license_number: '',
     license_class: '',
     license_expiry: '',
+    license_issue_date: '',
+    // Medical Certificate
+    medical_certificate_number: '',
+    medical_certificate_issue: '',
     medical_certificate_expiry: '',
+    // First Aid
+    first_aid_number: '',
+    first_aid_issue: '',
     first_aid_expiry: '',
+    // Forklift License
+    forklift_license_number: '',
+    forklift_license_issue: '',
     forklift_license_expiry: '',
+    // Dangerous Goods
+    dangerous_goods_number: '',
+    dangerous_goods_issue: '',
     dangerous_goods_expiry: '',
     password: '',
     auto_generate_username: true,
@@ -55,6 +68,14 @@ const DriversPage: React.FC = () => {
   const [licensePhotoBack, setLicensePhotoBack] = useState<string | null>(null);
   const [hasExistingPhotos, setHasExistingPhotos] = useState({ front: false, back: false });
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  
+  // Certificate photo states
+  const [certPhotos, setCertPhotos] = useState<{
+    medical: string | null;
+    first_aid: string | null;
+    forklift: string | null;
+    dangerous_goods: string | null;
+  }>({ medical: null, first_aid: null, forklift: null, dangerous_goods: null });
   
   // Password verification modal for viewing photos
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -100,9 +121,18 @@ const DriversPage: React.FC = () => {
       license_number: '',
       license_class: '',
       license_expiry: '',
+      license_issue_date: '',
+      medical_certificate_number: '',
+      medical_certificate_issue: '',
       medical_certificate_expiry: '',
+      first_aid_number: '',
+      first_aid_issue: '',
       first_aid_expiry: '',
+      forklift_license_number: '',
+      forklift_license_issue: '',
       forklift_license_expiry: '',
+      dangerous_goods_number: '',
+      dangerous_goods_issue: '',
       dangerous_goods_expiry: '',
       password: '',
       auto_generate_username: true,
@@ -111,6 +141,7 @@ const DriversPage: React.FC = () => {
     setLicensePhotoFront(null);
     setLicensePhotoBack(null);
     setHasExistingPhotos({ front: false, back: false });
+    setCertPhotos({ medical: null, first_aid: null, forklift: null, dangerous_goods: null });
   };
 
   const openAddPanel = () => {
@@ -127,9 +158,18 @@ const DriversPage: React.FC = () => {
       license_number: driver.license_number || '',
       license_class: driver.license_class || '',
       license_expiry: driver.license_expiry || '',
+      license_issue_date: (driver as any).license_issue_date || '',
+      medical_certificate_number: (driver as any).medical_certificate_number || '',
+      medical_certificate_issue: (driver as any).medical_certificate_issue || '',
       medical_certificate_expiry: driver.medical_certificate_expiry || '',
+      first_aid_number: (driver as any).first_aid_number || '',
+      first_aid_issue: (driver as any).first_aid_issue || '',
       first_aid_expiry: driver.first_aid_expiry || '',
+      forklift_license_number: (driver as any).forklift_license_number || '',
+      forklift_license_issue: (driver as any).forklift_license_issue || '',
       forklift_license_expiry: driver.forklift_license_expiry || '',
+      dangerous_goods_number: (driver as any).dangerous_goods_number || '',
+      dangerous_goods_issue: (driver as any).dangerous_goods_issue || '',
       dangerous_goods_expiry: driver.dangerous_goods_expiry || '',
       password: '',
       auto_generate_username: false, // Don't show for editing
@@ -568,7 +608,16 @@ const DriversPage: React.FC = () => {
                   <option value="MC">MC - Multi Combination</option>
                 </select>
               </div>
-              <div className="col-span-2">
+              <div>
+                <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>License Issue Date</label>
+                <input
+                  type="date"
+                  value={formData.license_issue_date}
+                  onChange={(e) => setFormData({ ...formData, license_issue_date: e.target.value })}
+                  className={`w-full ${inputBg} border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                />
+              </div>
+              <div>
                 <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>License Expiry</label>
                 <input
                   type="date"
@@ -580,12 +629,12 @@ const DriversPage: React.FC = () => {
               </div>
             </div>
             
-            {/* License Photos - Owner Only */}
-            {isOwner && editingDriver && (
+            {/* License Photos - Owner Only - Show on both Add and Edit */}
+            {isOwner && (
               <div className="mt-5 pt-4 border-t border-dashed border-[#334155]">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className={`${textPrimary} font-medium text-sm`}>License Photos (Secure)</h4>
-                  {(hasExistingPhotos.front || hasExistingPhotos.back) && (
+                  {editingDriver && (hasExistingPhotos.front || hasExistingPhotos.back) && (
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -701,42 +750,228 @@ const DriversPage: React.FC = () => {
           {/* Certifications Section */}
           <div className={`border-t ${darkMode ? 'border-[#334155]' : 'border-gray-200'} pt-5`}>
             <h3 className={`${textPrimary} font-medium mb-4`}>Certifications & Training</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>Medical Certificate Expiry</label>
+            
+            {/* Medical Certificate */}
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} mb-4`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className={`${textPrimary} font-medium text-sm`}>Medical Certificate</span>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => setCertPhotos({...certPhotos, medical: reader.result as string});
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <div className={`p-2 rounded-lg ${certPhotos.medical ? 'bg-green-500/20 text-green-500' : (darkMode ? 'bg-[#334155] text-gray-400' : 'bg-gray-200 text-gray-500')} hover:opacity-80 transition`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                </label>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  placeholder="Cert Number"
+                  value={formData.medical_certificate_number}
+                  onChange={(e) => setFormData({ ...formData, medical_certificate_number: e.target.value })}
+                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                />
                 <input
                   type="date"
+                  title="Issue Date"
+                  value={formData.medical_certificate_issue}
+                  onChange={(e) => setFormData({ ...formData, medical_certificate_issue: e.target.value })}
+                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                />
+                <input
+                  type="date"
+                  title="Expiry Date"
                   value={formData.medical_certificate_expiry}
                   onChange={(e) => setFormData({ ...formData, medical_certificate_expiry: e.target.value })}
-                  className={`w-full ${inputBg} border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
                 />
               </div>
-              <div>
-                <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>First Aid Expiry</label>
+              <div className="grid grid-cols-3 gap-2 mt-1">
+                <span className={`${textSecondary} text-xs`}>Number</span>
+                <span className={`${textSecondary} text-xs`}>Issue Date</span>
+                <span className={`${textSecondary} text-xs`}>Expiry Date</span>
+              </div>
+            </div>
+
+            {/* First Aid */}
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} mb-4`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className={`${textPrimary} font-medium text-sm`}>First Aid</span>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => setCertPhotos({...certPhotos, first_aid: reader.result as string});
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <div className={`p-2 rounded-lg ${certPhotos.first_aid ? 'bg-green-500/20 text-green-500' : (darkMode ? 'bg-[#334155] text-gray-400' : 'bg-gray-200 text-gray-500')} hover:opacity-80 transition`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                </label>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  placeholder="Cert Number"
+                  value={formData.first_aid_number}
+                  onChange={(e) => setFormData({ ...formData, first_aid_number: e.target.value })}
+                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                />
                 <input
                   type="date"
+                  title="Issue Date"
+                  value={formData.first_aid_issue}
+                  onChange={(e) => setFormData({ ...formData, first_aid_issue: e.target.value })}
+                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                />
+                <input
+                  type="date"
+                  title="Expiry Date"
                   value={formData.first_aid_expiry}
                   onChange={(e) => setFormData({ ...formData, first_aid_expiry: e.target.value })}
-                  className={`w-full ${inputBg} border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
                 />
               </div>
-              <div>
-                <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>Forklift License Expiry</label>
+              <div className="grid grid-cols-3 gap-2 mt-1">
+                <span className={`${textSecondary} text-xs`}>Number</span>
+                <span className={`${textSecondary} text-xs`}>Issue Date</span>
+                <span className={`${textSecondary} text-xs`}>Expiry Date</span>
+              </div>
+            </div>
+
+            {/* Forklift License */}
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} mb-4`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className={`${textPrimary} font-medium text-sm`}>Forklift License</span>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => setCertPhotos({...certPhotos, forklift: reader.result as string});
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <div className={`p-2 rounded-lg ${certPhotos.forklift ? 'bg-green-500/20 text-green-500' : (darkMode ? 'bg-[#334155] text-gray-400' : 'bg-gray-200 text-gray-500')} hover:opacity-80 transition`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                </label>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  placeholder="License Number"
+                  value={formData.forklift_license_number}
+                  onChange={(e) => setFormData({ ...formData, forklift_license_number: e.target.value })}
+                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                />
                 <input
                   type="date"
+                  title="Issue Date"
+                  value={formData.forklift_license_issue}
+                  onChange={(e) => setFormData({ ...formData, forklift_license_issue: e.target.value })}
+                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                />
+                <input
+                  type="date"
+                  title="Expiry Date"
                   value={formData.forklift_license_expiry}
                   onChange={(e) => setFormData({ ...formData, forklift_license_expiry: e.target.value })}
-                  className={`w-full ${inputBg} border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
                 />
               </div>
-              <div>
-                <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>Dangerous Goods Expiry</label>
+              <div className="grid grid-cols-3 gap-2 mt-1">
+                <span className={`${textSecondary} text-xs`}>Number</span>
+                <span className={`${textSecondary} text-xs`}>Issue Date</span>
+                <span className={`${textSecondary} text-xs`}>Expiry Date</span>
+              </div>
+            </div>
+
+            {/* Dangerous Goods */}
+            <div className={`p-4 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className={`${textPrimary} font-medium text-sm`}>Dangerous Goods</span>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => setCertPhotos({...certPhotos, dangerous_goods: reader.result as string});
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <div className={`p-2 rounded-lg ${certPhotos.dangerous_goods ? 'bg-green-500/20 text-green-500' : (darkMode ? 'bg-[#334155] text-gray-400' : 'bg-gray-200 text-gray-500')} hover:opacity-80 transition`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                </label>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  placeholder="Cert Number"
+                  value={formData.dangerous_goods_number}
+                  onChange={(e) => setFormData({ ...formData, dangerous_goods_number: e.target.value })}
+                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                />
                 <input
                   type="date"
+                  title="Issue Date"
+                  value={formData.dangerous_goods_issue}
+                  onChange={(e) => setFormData({ ...formData, dangerous_goods_issue: e.target.value })}
+                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                />
+                <input
+                  type="date"
+                  title="Expiry Date"
                   value={formData.dangerous_goods_expiry}
                   onChange={(e) => setFormData({ ...formData, dangerous_goods_expiry: e.target.value })}
-                  className={`w-full ${inputBg} border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
                 />
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-1">
+                <span className={`${textSecondary} text-xs`}>Number</span>
+                <span className={`${textSecondary} text-xs`}>Issue Date</span>
+                <span className={`${textSecondary} text-xs`}>Expiry Date</span>
               </div>
             </div>
           </div>
