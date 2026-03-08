@@ -50,7 +50,11 @@ const UsersPage: React.FC = () => {
   const fetchUsers = async () => {
     try {
       const response = await userAPI.getAll();
-      setUsers(response.data);
+      // Filter to only show admin/owner/super_admin users (not drivers/operators)
+      const adminUsers = response.data.filter((u: User) => 
+        ['admin', 'owner', 'super_admin'].includes(u.role)
+      );
+      setUsers(adminUsers);
     } catch (error) {
       console.error('Failed to fetch users:', error);
       showToast.error('Failed to load users');
