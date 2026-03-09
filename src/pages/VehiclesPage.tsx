@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { vehicleAPI, driverAPI } from '../utils/api';
 import { useTheme } from '../contexts/ThemeContext';
 import SlidePanel from '../components/SlidePanel';
@@ -42,6 +42,8 @@ const VehiclesPage: React.FC = () => {
   const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
   const [driverSearch, setDriverSearch] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showOperatorDropdown, setShowOperatorDropdown] = useState(false);
+  const [operatorSearch, setOperatorSearch] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     registration_number: '',
@@ -187,6 +189,27 @@ const VehiclesPage: React.FC = () => {
     (d.full_name || d.name || '')?.toLowerCase().includes(driverSearch.toLowerCase()) ||
     d.email?.toLowerCase().includes(driverSearch.toLowerCase())
   );
+
+  // Filtered operators for the compact dropdown
+  const filteredOperators = drivers.filter(d => 
+    (d.full_name || d.name || '')?.toLowerCase().includes(operatorSearch.toLowerCase()) ||
+    d.email?.toLowerCase().includes(operatorSearch.toLowerCase()) ||
+    d.username?.toLowerCase().includes(operatorSearch.toLowerCase())
+  );
+
+  // Ref for dropdown click outside detection
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowOperatorDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -460,60 +483,169 @@ const VehiclesPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Assign Operators Section */}
+          {/* Assign Operators Section - Compact Dropdown */}
           <div className={`border-t ${darkMode ? 'border-[#334155]' : 'border-gray-200'} pt-5`}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className={`text-sm font-semibold ${textPrimary}`}>Assign Operators</h3>
+            <label className={`block text-sm font-medium ${textSecondary} mb-1.5`}>Assign Operators</label>
+            <div className="relative" ref={dropdownRef}>
+              {/* Dropdown Trigger Button */}
               <button
                 type="button"
                 onClick={() => {
-                  if (formData.assigned_driver_ids.length === drivers.length) {
-                    setFormData({ ...formData, assigned_driver_ids: [] });
-                  } else {
-                    setFormData({ ...formData, assigned_driver_ids: drivers.map(d => d.id) });
-                  }
+                  setShowOperatorDropdown(!showOperatorDropdown);
+                  setOperatorSearch('');
                 }}
-                className={`text-xs px-3 py-1.5 rounded-lg ${
-                  formData.assigned_driver_ids.length === drivers.length && drivers.length > 0
-                    ? 'bg-cyan-500/20 text-cyan-400'
-                    : darkMode ? 'bg-[#334155] text-gray-300' : 'bg-gray-100 text-gray-600'
-                } hover:opacity-80 transition`}
+                className={`w-full ${inputBg} border rounded-lg px-4 py-2.5 text-left flex items-center justify-between focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
               >
-                {formData.assigned_driver_ids.length === drivers.length && drivers.length > 0 ? 'Deselect All' : 'Select All'}
+                <span className={formData.assigned_driver_ids.length > 0 ? textPrimary : textSecondary}>
+                  {formData.assigned_driver_ids.length === 0 
+                    ? 'Select operators...' 
+                    : formData.assigned_driver_ids.length === 1
+                      ? `1 operator selected`
+                      : `${formData.assigned_driver_ids.length} operators selected`
+                  }
+                </span>
+                <svg 
+                  className={`w-5 h-5 ${textSecondary} transition-transform ${showOperatorDropdown ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
-            </div>
-            <div className={`border ${darkMode ? 'border-[#334155]' : 'border-gray-200'} rounded-lg divide-y ${darkMode ? 'divide-[#334155]' : 'divide-gray-100'} max-h-40 overflow-y-auto`}>
-              {drivers.length === 0 ? (
-                <div className={`p-4 text-center ${textSecondary} text-sm`}>No operators available</div>
-              ) : (
-                drivers.map((driver) => (
-                  <label
-                    key={driver.id}
-                    className={`flex items-center gap-3 p-3 cursor-pointer ${hoverBg} transition`}
+
+              {/* Dropdown Panel */}
+              {showOperatorDropdown && (
+                <div className={`absolute z-50 w-full mt-1 ${darkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-gray-200'} border rounded-lg shadow-lg overflow-hidden`}>
+                  {/* Search Input */}
+                  <div className={`p-2 border-b ${darkMode ? 'border-[#334155]' : 'border-gray-100'}`}>
+                    <div className="relative">
+                      <svg className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${textSecondary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <input
+                        type="text"
+                        value={operatorSearch}
+                        onChange={(e) => setOperatorSearch(e.target.value)}
+                        placeholder="Search operators..."
+                        className={`w-full pl-9 pr-3 py-2 text-sm ${inputBg} border rounded-md focus:ring-1 focus:ring-cyan-500 focus:border-transparent outline-none`}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Select All Option */}
+                  <div 
+                    className={`flex items-center justify-between px-3 py-2 border-b ${darkMode ? 'border-[#334155] bg-[#0F172A]' : 'border-gray-100 bg-gray-50'}`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={formData.assigned_driver_ids.includes(driver.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setFormData({ ...formData, assigned_driver_ids: [...formData.assigned_driver_ids, driver.id] });
+                    <span className={`text-sm font-medium ${textPrimary}`}>Select All</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (formData.assigned_driver_ids.length === drivers.length) {
+                          setFormData({ ...formData, assigned_driver_ids: [] });
                         } else {
-                          setFormData({ ...formData, assigned_driver_ids: formData.assigned_driver_ids.filter(id => id !== driver.id) });
+                          setFormData({ ...formData, assigned_driver_ids: drivers.map(d => d.id) });
                         }
                       }}
-                      className="w-4 h-4 rounded border-gray-300 text-cyan-500 focus:ring-cyan-500"
-                    />
-                    <div>
-                      <div className={`${textPrimary} text-sm`}>{driver.name}</div>
-                      <div className={`text-xs ${textSecondary}`}>{driver.email || `@${driver.username}`}</div>
-                    </div>
-                  </label>
-                ))
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                        formData.assigned_driver_ids.length === drivers.length && drivers.length > 0
+                          ? 'bg-cyan-500' 
+                          : darkMode ? 'bg-[#334155]' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                          formData.assigned_driver_ids.length === drivers.length && drivers.length > 0
+                            ? 'translate-x-5' 
+                            : 'translate-x-0.5'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Operator List */}
+                  <div className="max-h-48 overflow-y-auto">
+                    {filteredOperators.length === 0 ? (
+                      <div className={`p-3 text-center ${textSecondary} text-sm`}>
+                        {drivers.length === 0 ? 'No operators available' : 'No matching operators'}
+                      </div>
+                    ) : (
+                      filteredOperators.map((driver) => (
+                        <label
+                          key={driver.id}
+                          className={`flex items-center gap-3 px-3 py-2 cursor-pointer ${hoverBg} transition`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={formData.assigned_driver_ids.includes(driver.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData({ ...formData, assigned_driver_ids: [...formData.assigned_driver_ids, driver.id] });
+                              } else {
+                                setFormData({ ...formData, assigned_driver_ids: formData.assigned_driver_ids.filter(id => id !== driver.id) });
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-cyan-500 focus:ring-cyan-500"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className={`${textPrimary} text-sm truncate`}>{driver.name}</div>
+                            <div className={`text-xs ${textSecondary} truncate`}>{driver.email || `@${driver.username}`}</div>
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Footer with count */}
+                  <div className={`px-3 py-2 border-t ${darkMode ? 'border-[#334155] bg-[#0F172A]' : 'border-gray-100 bg-gray-50'} flex items-center justify-between`}>
+                    <span className={`text-xs ${textSecondary}`}>
+                      {formData.assigned_driver_ids.length} of {drivers.length} selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowOperatorDropdown(false)}
+                      className="text-xs text-cyan-500 hover:text-cyan-400 font-medium"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
-            <div className={`text-xs ${textSecondary} mt-2`}>
-              {formData.assigned_driver_ids.length} operator{formData.assigned_driver_ids.length !== 1 ? 's' : ''} selected
-            </div>
+
+            {/* Selected operators preview (compact pills) */}
+            {formData.assigned_driver_ids.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {formData.assigned_driver_ids.slice(0, 3).map(id => {
+                  const driver = drivers.find(d => d.id === id);
+                  return (
+                    <span 
+                      key={id} 
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${darkMode ? 'bg-cyan-500/20 text-cyan-300' : 'bg-cyan-100 text-cyan-700'}`}
+                    >
+                      {driver?.name || 'Unknown'}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, assigned_driver_ids: formData.assigned_driver_ids.filter(i => i !== id) })}
+                        className="hover:opacity-70"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </span>
+                  );
+                })}
+                {formData.assigned_driver_ids.length > 3 && (
+                  <span className={`text-xs ${textSecondary} py-0.5`}>
+                    +{formData.assigned_driver_ids.length - 3} more
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           <div className={`flex gap-3 pt-4 border-t ${darkMode ? 'border-[#334155]' : 'border-gray-200'}`}>

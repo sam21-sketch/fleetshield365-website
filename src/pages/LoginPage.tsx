@@ -78,9 +78,10 @@ const LoginPage: React.FC = () => {
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition"
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 pr-12 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition [&::-ms-reveal]:hidden [&::-webkit-credentials-auto-fill-button]:hidden"
                   placeholder="Enter your password"
                   required
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"

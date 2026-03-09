@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { driverAPI } from '../utils/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -69,13 +69,22 @@ const DriversPage: React.FC = () => {
   const [hasExistingPhotos, setHasExistingPhotos] = useState({ front: false, back: false });
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   
-  // Certificate photo states
+  // Certificate photo states - now with front/back for each
   const [certPhotos, setCertPhotos] = useState<{
-    medical: string | null;
-    first_aid: string | null;
-    forklift: string | null;
-    dangerous_goods: string | null;
-  }>({ medical: null, first_aid: null, forklift: null, dangerous_goods: null });
+    medical_front: string | null;
+    medical_back: string | null;
+    first_aid_front: string | null;
+    first_aid_back: string | null;
+    forklift_front: string | null;
+    forklift_back: string | null;
+    dangerous_goods_front: string | null;
+    dangerous_goods_back: string | null;
+  }>({ 
+    medical_front: null, medical_back: null,
+    first_aid_front: null, first_aid_back: null,
+    forklift_front: null, forklift_back: null,
+    dangerous_goods_front: null, dangerous_goods_back: null
+  });
   
   // Password verification modal for viewing photos
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -83,6 +92,15 @@ const DriversPage: React.FC = () => {
   const [verifyingPassword, setVerifyingPassword] = useState(false);
   const [viewingPhotos, setViewingPhotos] = useState<{ front: string | null; back: string | null } | null>(null);
   const [showPhotoViewer, setShowPhotoViewer] = useState(false);
+
+  // Download documents modal state
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [selectedOperatorIds, setSelectedOperatorIds] = useState<string[]>([]);
+  const [selectedDocTypes, setSelectedDocTypes] = useState<string[]>(['driver_license']);
+  const [downloadPassword, setDownloadPassword] = useState('');
+  const [downloading, setDownloading] = useState(false);
+  const [showOperatorDropdown, setShowOperatorDropdown] = useState(false);
+  const [operatorSearchQuery, setOperatorSearchQuery] = useState('');
 
   // Theme styles - Professional Dark Mode
   const cardBg = darkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-gray-100';
@@ -141,7 +159,12 @@ const DriversPage: React.FC = () => {
     setLicensePhotoFront(null);
     setLicensePhotoBack(null);
     setHasExistingPhotos({ front: false, back: false });
-    setCertPhotos({ medical: null, first_aid: null, forklift: null, dangerous_goods: null });
+    setCertPhotos({ 
+      medical_front: null, medical_back: null,
+      first_aid_front: null, first_aid_back: null,
+      forklift_front: null, forklift_back: null,
+      dangerous_goods_front: null, dangerous_goods_back: null
+    });
   };
 
   const openAddPanel = () => {
@@ -364,16 +387,35 @@ const DriversPage: React.FC = () => {
           <h1 className={`text-2xl font-bold ${textPrimary}`}>Operators</h1>
           <p className={textSecondary}>Manage your operators and send login credentials</p>
         </div>
-        <button
-          onClick={openAddPanel}
-          data-testid="add-driver-btn"
-          className="bg-[#0A1628] hover:bg-[#132337] text-white px-4 py-2.5 rounded-lg font-medium transition flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add Operator
-        </button>
+        <div className="flex items-center gap-3">
+          {isOwner && (
+            <button
+              onClick={() => {
+                setShowDownloadModal(true);
+                setSelectedOperatorIds([]);
+                setSelectedDocTypes(['driver_license']);
+                setDownloadPassword('');
+              }}
+              data-testid="download-documents-btn"
+              className={`${darkMode ? 'bg-[#334155] hover:bg-[#475569]' : 'bg-gray-100 hover:bg-gray-200'} text-${darkMode ? 'white' : 'gray-700'} px-4 py-2.5 rounded-lg font-medium transition flex items-center gap-2`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Download
+            </button>
+          )}
+          <button
+            onClick={openAddPanel}
+            data-testid="add-driver-btn"
+            className="bg-[#0A1628] hover:bg-[#132337] text-white px-4 py-2.5 rounded-lg font-medium transition flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Operator
+          </button>
+        </div>
       </div>
 
       {/* Operator List */}
@@ -629,351 +671,204 @@ const DriversPage: React.FC = () => {
               </div>
             </div>
             
-            {/* License Photos - Owner Only - Show on both Add and Edit */}
+            {/* License Photos - Owner Only - Compact Design */}
             {isOwner && (
-              <div className="mt-5 pt-4 border-t border-dashed border-[#334155]">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className={`${textPrimary} font-medium text-sm`}>License Photos (Secure)</h4>
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`${textSecondary} text-xs font-medium uppercase tracking-wide`}>License Photos</span>
                   {editingDriver && (hasExistingPhotos.front || hasExistingPhotos.back) && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                       <button
                         type="button"
                         onClick={handleViewLicensePhotos}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition"
+                        className="text-xs px-2 py-1 rounded bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition"
                         data-testid="view-license-photos-btn"
                       >
-                        View Photos
+                        View
                       </button>
                       <button
                         type="button"
                         onClick={handleDeleteLicensePhotos}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition"
+                        className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition"
                         data-testid="delete-license-photos-btn"
                       >
-                        Delete All
+                        Delete
                       </button>
                     </div>
                   )}
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Front Photo */}
-                  <div>
-                    <label className={`block text-xs ${textSecondary} mb-2`}>
-                      Front {hasExistingPhotos.front && <span className="text-green-400">(Uploaded)</span>}
-                    </label>
-                    <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-lg cursor-pointer transition ${
+                <div className="flex items-center gap-3">
+                  {/* Front Photo Button */}
+                  <label className="cursor-pointer group">
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition ${
                       licensePhotoFront 
                         ? 'border-teal-500 bg-teal-500/10' 
-                        : darkMode ? 'border-[#334155] hover:border-[#475569] bg-[#0F172A]' : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+                        : hasExistingPhotos.front
+                          ? 'border-green-500/50 bg-green-500/10'
+                          : darkMode ? 'border-[#334155] bg-[#0F172A] hover:border-[#475569]' : 'border-gray-200 bg-gray-50 hover:border-gray-300'
                     }`}>
-                      {licensePhotoFront ? (
-                        <div className="text-center">
-                          <svg className="w-8 h-8 mx-auto text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          <span className="text-xs text-teal-400 mt-1">Photo selected</span>
-                        </div>
-                      ) : (
-                        <div className="text-center">
-                          <svg className={`w-8 h-8 mx-auto ${textSecondary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span className={`text-xs ${textSecondary} mt-1`}>Click to upload</span>
-                        </div>
-                      )}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoSelect('front')}
-                        className="hidden"
-                        data-testid="license-photo-front-input"
-                      />
-                    </label>
-                  </div>
+                      <svg className={`w-4 h-4 ${licensePhotoFront ? 'text-teal-400' : hasExistingPhotos.front ? 'text-green-400' : textSecondary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span className={`text-xs font-medium ${licensePhotoFront ? 'text-teal-400' : hasExistingPhotos.front ? 'text-green-400' : textSecondary}`}>
+                        Front {licensePhotoFront && '✓'} {!licensePhotoFront && hasExistingPhotos.front && '✓'}
+                      </span>
+                    </div>
+                    <input type="file" accept="image/*" onChange={handlePhotoSelect('front')} className="hidden" data-testid="license-photo-front-input" />
+                  </label>
                   
-                  {/* Back Photo */}
-                  <div>
-                    <label className={`block text-xs ${textSecondary} mb-2`}>
-                      Back {hasExistingPhotos.back && <span className="text-green-400">(Uploaded)</span>}
-                    </label>
-                    <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-lg cursor-pointer transition ${
+                  {/* Back Photo Button */}
+                  <label className="cursor-pointer group">
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition ${
                       licensePhotoBack 
                         ? 'border-teal-500 bg-teal-500/10' 
-                        : darkMode ? 'border-[#334155] hover:border-[#475569] bg-[#0F172A]' : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+                        : hasExistingPhotos.back
+                          ? 'border-green-500/50 bg-green-500/10'
+                          : darkMode ? 'border-[#334155] bg-[#0F172A] hover:border-[#475569]' : 'border-gray-200 bg-gray-50 hover:border-gray-300'
                     }`}>
-                      {licensePhotoBack ? (
-                        <div className="text-center">
-                          <svg className="w-8 h-8 mx-auto text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          <span className="text-xs text-teal-400 mt-1">Photo selected</span>
-                        </div>
-                      ) : (
-                        <div className="text-center">
-                          <svg className={`w-8 h-8 mx-auto ${textSecondary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <span className={`text-xs ${textSecondary} mt-1`}>Click to upload</span>
-                        </div>
-                      )}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoSelect('back')}
-                        className="hidden"
-                        data-testid="license-photo-back-input"
-                      />
-                    </label>
-                  </div>
+                      <svg className={`w-4 h-4 ${licensePhotoBack ? 'text-teal-400' : hasExistingPhotos.back ? 'text-green-400' : textSecondary}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span className={`text-xs font-medium ${licensePhotoBack ? 'text-teal-400' : hasExistingPhotos.back ? 'text-green-400' : textSecondary}`}>
+                        Back {licensePhotoBack && '✓'} {!licensePhotoBack && hasExistingPhotos.back && '✓'}
+                      </span>
+                    </div>
+                    <input type="file" accept="image/*" onChange={handlePhotoSelect('back')} className="hidden" data-testid="license-photo-back-input" />
+                  </label>
+                  
+                  {/* Upload Button - shows when new photos selected */}
+                  {(licensePhotoFront || licensePhotoBack) && (
+                    <button
+                      type="button"
+                      onClick={handleUploadLicensePhotos}
+                      disabled={uploadingPhotos}
+                      className="px-3 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-teal-500/50 text-white text-xs font-medium rounded-lg transition"
+                      data-testid="upload-license-photos-btn"
+                    >
+                      {uploadingPhotos ? 'Uploading...' : 'Upload'}
+                    </button>
+                  )}
                 </div>
-                
-                {(licensePhotoFront || licensePhotoBack) && (
-                  <button
-                    type="button"
-                    onClick={handleUploadLicensePhotos}
-                    disabled={uploadingPhotos}
-                    className="mt-3 w-full py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-teal-500/50 text-white text-sm font-medium rounded-lg transition"
-                    data-testid="upload-license-photos-btn"
-                  >
-                    {uploadingPhotos ? 'Uploading...' : 'Upload License Photos'}
-                  </button>
-                )}
-                
-                <p className={`text-xs ${textSecondary} mt-2`}>
-                  Only you (Company Owner) can view these photos. Password required to access.
-                </p>
               </div>
             )}
           </div>
 
-          {/* Certifications Section */}
+          {/* Certifications Section - Compact Professional Design */}
           <div className={`border-t ${darkMode ? 'border-[#334155]' : 'border-gray-200'} pt-5`}>
             <h3 className={`${textPrimary} font-medium mb-4`}>Certifications & Training</h3>
             
-            {/* Medical Certificate */}
-            <div className={`p-4 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} mb-4`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`${textPrimary} font-medium text-sm`}>Medical Certificate</span>
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = () => setCertPhotos({...certPhotos, medical: reader.result as string});
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                  />
-                  <div className={`p-2 rounded-lg ${certPhotos.medical ? 'bg-green-500/20 text-green-500' : (darkMode ? 'bg-[#334155] text-gray-400' : 'bg-gray-200 text-gray-500')} hover:opacity-80 transition`}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+            {/* Reusable Certification Card Component */}
+            {[
+              { key: 'medical', label: 'Medical Certificate', numField: 'medical_certificate_number', issueField: 'medical_certificate_issue', expiryField: 'medical_certificate_expiry' },
+              { key: 'first_aid', label: 'First Aid', numField: 'first_aid_number', issueField: 'first_aid_issue', expiryField: 'first_aid_expiry' },
+              { key: 'forklift', label: 'Forklift License', numField: 'forklift_license_number', issueField: 'forklift_license_issue', expiryField: 'forklift_license_expiry' },
+              { key: 'dangerous_goods', label: 'Dangerous Goods', numField: 'dangerous_goods_number', issueField: 'dangerous_goods_issue', expiryField: 'dangerous_goods_expiry' },
+            ].map((cert) => (
+              <div key={cert.key} className={`p-3 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} mb-3`}>
+                {/* Header Row with Title and Photo Buttons */}
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`${textPrimary} font-medium text-sm`}>{cert.label}</span>
+                  <div className="flex items-center gap-1.5">
+                    {/* Front Photo Button */}
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = () => setCertPhotos({...certPhotos, [`${cert.key}_front`]: reader.result as string});
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition ${
+                        certPhotos[`${cert.key}_front` as keyof typeof certPhotos] 
+                          ? 'bg-green-500/20 text-green-400' 
+                          : darkMode ? 'bg-[#334155] text-gray-400 hover:bg-[#475569]' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                      }`}>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>Front</span>
+                        {certPhotos[`${cert.key}_front` as keyof typeof certPhotos] && <span>✓</span>}
+                      </div>
+                    </label>
+                    
+                    {/* Back Photo Button */}
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = () => setCertPhotos({...certPhotos, [`${cert.key}_back`]: reader.result as string});
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition ${
+                        certPhotos[`${cert.key}_back` as keyof typeof certPhotos] 
+                          ? 'bg-green-500/20 text-green-400' 
+                          : darkMode ? 'bg-[#334155] text-gray-400 hover:bg-[#475569]' : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                      }`}>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>Back</span>
+                        {certPhotos[`${cert.key}_back` as keyof typeof certPhotos] && <span>✓</span>}
+                      </div>
+                    </label>
                   </div>
-                </label>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="text"
-                  placeholder="Cert Number"
-                  value={formData.medical_certificate_number}
-                  onChange={(e) => setFormData({ ...formData, medical_certificate_number: e.target.value })}
-                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
-                />
-                <input
-                  type="date"
-                  title="Issue Date"
-                  value={formData.medical_certificate_issue}
-                  onChange={(e) => setFormData({ ...formData, medical_certificate_issue: e.target.value })}
-                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
-                />
-                <input
-                  type="date"
-                  title="Expiry Date"
-                  value={formData.medical_certificate_expiry}
-                  onChange={(e) => setFormData({ ...formData, medical_certificate_expiry: e.target.value })}
-                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-2 mt-1">
-                <span className={`${textSecondary} text-xs`}>Number</span>
-                <span className={`${textSecondary} text-xs`}>Issue Date</span>
-                <span className={`${textSecondary} text-xs`}>Expiry Date</span>
-              </div>
-            </div>
-
-            {/* First Aid */}
-            <div className={`p-4 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} mb-4`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`${textPrimary} font-medium text-sm`}>First Aid</span>
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = () => setCertPhotos({...certPhotos, first_aid: reader.result as string});
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                  />
-                  <div className={`p-2 rounded-lg ${certPhotos.first_aid ? 'bg-green-500/20 text-green-500' : (darkMode ? 'bg-[#334155] text-gray-400' : 'bg-gray-200 text-gray-500')} hover:opacity-80 transition`}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+                </div>
+                
+                {/* Input Fields Row */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Number"
+                      value={(formData as any)[cert.numField]}
+                      onChange={(e) => setFormData({ ...formData, [cert.numField]: e.target.value })}
+                      className={`w-full ${inputBg} border rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                    />
                   </div>
-                </label>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="text"
-                  placeholder="Cert Number"
-                  value={formData.first_aid_number}
-                  onChange={(e) => setFormData({ ...formData, first_aid_number: e.target.value })}
-                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
-                />
-                <input
-                  type="date"
-                  title="Issue Date"
-                  value={formData.first_aid_issue}
-                  onChange={(e) => setFormData({ ...formData, first_aid_issue: e.target.value })}
-                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
-                />
-                <input
-                  type="date"
-                  title="Expiry Date"
-                  value={formData.first_aid_expiry}
-                  onChange={(e) => setFormData({ ...formData, first_aid_expiry: e.target.value })}
-                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-2 mt-1">
-                <span className={`${textSecondary} text-xs`}>Number</span>
-                <span className={`${textSecondary} text-xs`}>Issue Date</span>
-                <span className={`${textSecondary} text-xs`}>Expiry Date</span>
-              </div>
-            </div>
-
-            {/* Forklift License */}
-            <div className={`p-4 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} mb-4`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`${textPrimary} font-medium text-sm`}>Forklift License</span>
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = () => setCertPhotos({...certPhotos, forklift: reader.result as string});
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                  />
-                  <div className={`p-2 rounded-lg ${certPhotos.forklift ? 'bg-green-500/20 text-green-500' : (darkMode ? 'bg-[#334155] text-gray-400' : 'bg-gray-200 text-gray-500')} hover:opacity-80 transition`}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+                  <div>
+                    <input
+                      type="date"
+                      title="Issue Date"
+                      value={(formData as any)[cert.issueField]}
+                      onChange={(e) => setFormData({ ...formData, [cert.issueField]: e.target.value })}
+                      className={`w-full ${inputBg} border rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                    />
                   </div>
-                </label>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="text"
-                  placeholder="License Number"
-                  value={formData.forklift_license_number}
-                  onChange={(e) => setFormData({ ...formData, forklift_license_number: e.target.value })}
-                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
-                />
-                <input
-                  type="date"
-                  title="Issue Date"
-                  value={formData.forklift_license_issue}
-                  onChange={(e) => setFormData({ ...formData, forklift_license_issue: e.target.value })}
-                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
-                />
-                <input
-                  type="date"
-                  title="Expiry Date"
-                  value={formData.forklift_license_expiry}
-                  onChange={(e) => setFormData({ ...formData, forklift_license_expiry: e.target.value })}
-                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-2 mt-1">
-                <span className={`${textSecondary} text-xs`}>Number</span>
-                <span className={`${textSecondary} text-xs`}>Issue Date</span>
-                <span className={`${textSecondary} text-xs`}>Expiry Date</span>
-              </div>
-            </div>
-
-            {/* Dangerous Goods */}
-            <div className={`p-4 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'}`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`${textPrimary} font-medium text-sm`}>Dangerous Goods</span>
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = () => setCertPhotos({...certPhotos, dangerous_goods: reader.result as string});
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                  />
-                  <div className={`p-2 rounded-lg ${certPhotos.dangerous_goods ? 'bg-green-500/20 text-green-500' : (darkMode ? 'bg-[#334155] text-gray-400' : 'bg-gray-200 text-gray-500')} hover:opacity-80 transition`}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+                  <div>
+                    <input
+                      type="date"
+                      title="Expiry Date"
+                      value={(formData as any)[cert.expiryField]}
+                      onChange={(e) => setFormData({ ...formData, [cert.expiryField]: e.target.value })}
+                      className={`w-full ${inputBg} border rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                    />
                   </div>
-                </label>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-1">
+                  <span className={`${textSecondary} text-[10px]`}>Number</span>
+                  <span className={`${textSecondary} text-[10px]`}>Issue Date</span>
+                  <span className={`${textSecondary} text-[10px]`}>Expiry Date</span>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="text"
-                  placeholder="Cert Number"
-                  value={formData.dangerous_goods_number}
-                  onChange={(e) => setFormData({ ...formData, dangerous_goods_number: e.target.value })}
-                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
-                />
-                <input
-                  type="date"
-                  title="Issue Date"
-                  value={formData.dangerous_goods_issue}
-                  onChange={(e) => setFormData({ ...formData, dangerous_goods_issue: e.target.value })}
-                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
-                />
-                <input
-                  type="date"
-                  title="Expiry Date"
-                  value={formData.dangerous_goods_expiry}
-                  onChange={(e) => setFormData({ ...formData, dangerous_goods_expiry: e.target.value })}
-                  className={`${inputBg} border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-2 mt-1">
-                <span className={`${textSecondary} text-xs`}>Number</span>
-                <span className={`${textSecondary} text-xs`}>Issue Date</span>
-                <span className={`${textSecondary} text-xs`}>Expiry Date</span>
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* Actions */}
@@ -1131,6 +1026,225 @@ const DriversPage: React.FC = () => {
                 className="px-4 py-2 bg-[#334155] hover:bg-[#475569] text-white rounded-lg text-sm font-medium"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Download Documents Modal */}
+      {showDownloadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className={`${darkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-gray-200'} border rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl`}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className={`${textPrimary} font-semibold text-lg`}>Download Documents</h3>
+              <button
+                onClick={() => setShowDownloadModal(false)}
+                className={`p-1.5 rounded-lg ${darkMode ? 'hover:bg-[#334155]' : 'hover:bg-gray-100'}`}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            {/* Operators Selection */}
+            <div className="mb-4">
+              <label className={`block text-sm font-medium ${textSecondary} mb-2`}>Operators</label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowOperatorDropdown(!showOperatorDropdown)}
+                  className={`w-full ${inputBg} border rounded-lg px-4 py-2.5 text-left flex items-center justify-between focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition`}
+                >
+                  <span className={selectedOperatorIds.length > 0 ? textPrimary : textSecondary}>
+                    {selectedOperatorIds.length === 0 
+                      ? 'Select operators...' 
+                      : selectedOperatorIds.length === drivers.length
+                        ? 'All operators'
+                        : `${selectedOperatorIds.length} operator${selectedOperatorIds.length !== 1 ? 's' : ''} selected`
+                    }
+                  </span>
+                  <svg className={`w-5 h-5 ${textSecondary} transition-transform ${showOperatorDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showOperatorDropdown && (
+                  <div className={`absolute z-50 w-full mt-1 ${darkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-gray-200'} border rounded-lg shadow-lg overflow-hidden`}>
+                    <div className={`p-2 border-b ${darkMode ? 'border-[#334155]' : 'border-gray-100'}`}>
+                      <input
+                        type="text"
+                        value={operatorSearchQuery}
+                        onChange={(e) => setOperatorSearchQuery(e.target.value)}
+                        placeholder="Search..."
+                        className={`w-full px-3 py-1.5 text-sm ${inputBg} border rounded focus:ring-1 focus:ring-cyan-500 outline-none`}
+                      />
+                    </div>
+                    <div className={`flex items-center justify-between px-3 py-2 border-b ${darkMode ? 'border-[#334155] bg-[#0F172A]' : 'border-gray-100 bg-gray-50'}`}>
+                      <span className={`text-sm font-medium ${textPrimary}`}>Select All</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedOperatorIds.length === drivers.length) {
+                            setSelectedOperatorIds([]);
+                          } else {
+                            setSelectedOperatorIds(drivers.map(d => d.id));
+                          }
+                        }}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                          selectedOperatorIds.length === drivers.length && drivers.length > 0 ? 'bg-cyan-500' : darkMode ? 'bg-[#334155]' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                          selectedOperatorIds.length === drivers.length && drivers.length > 0 ? 'translate-x-5' : 'translate-x-0.5'
+                        }`} />
+                      </button>
+                    </div>
+                    <div className="max-h-40 overflow-y-auto">
+                      {drivers.filter(d => d.name.toLowerCase().includes(operatorSearchQuery.toLowerCase())).map((driver) => (
+                        <label key={driver.id} className={`flex items-center gap-3 px-3 py-2 cursor-pointer ${hoverBg}`}>
+                          <input
+                            type="checkbox"
+                            checked={selectedOperatorIds.includes(driver.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedOperatorIds([...selectedOperatorIds, driver.id]);
+                              } else {
+                                setSelectedOperatorIds(selectedOperatorIds.filter(id => id !== driver.id));
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 text-cyan-500 focus:ring-cyan-500"
+                          />
+                          <span className={`${textPrimary} text-sm`}>{driver.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className={`px-3 py-2 border-t ${darkMode ? 'border-[#334155]' : 'border-gray-100'} flex justify-end`}>
+                      <button
+                        type="button"
+                        onClick={() => setShowOperatorDropdown(false)}
+                        className="text-xs text-cyan-500 hover:text-cyan-400 font-medium"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Document Types */}
+            <div className="mb-4">
+              <label className={`block text-sm font-medium ${textSecondary} mb-2`}>Documents</label>
+              <div className={`p-3 rounded-lg ${darkMode ? 'bg-[#0F172A]' : 'bg-gray-50'} space-y-2`}>
+                {[
+                  { id: 'driver_license', label: 'Driver License' },
+                  { id: 'medical', label: 'Medical Certificate' },
+                  { id: 'first_aid', label: 'First Aid' },
+                  { id: 'forklift', label: 'Forklift License' },
+                  { id: 'dangerous_goods', label: 'Dangerous Goods' },
+                ].map((doc) => (
+                  <label key={doc.id} className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedDocTypes.includes(doc.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedDocTypes([...selectedDocTypes, doc.id]);
+                        } else {
+                          setSelectedDocTypes(selectedDocTypes.filter(t => t !== doc.id));
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 text-cyan-500 focus:ring-cyan-500"
+                    />
+                    <span className={`${textPrimary} text-sm`}>{doc.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="mb-5">
+              <label className={`block text-sm font-medium ${textSecondary} mb-2`}>Password</label>
+              <input
+                type="password"
+                value={downloadPassword}
+                onChange={(e) => setDownloadPassword(e.target.value)}
+                placeholder="Enter your password"
+                className={`w-full ${inputBg} border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none`}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDownloadModal(false)}
+                className={`flex-1 py-2.5 rounded-lg font-medium ${darkMode ? 'bg-[#334155] hover:bg-[#475569] text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (selectedOperatorIds.length === 0) {
+                    showToast.error('Please select at least one operator');
+                    return;
+                  }
+                  if (selectedDocTypes.length === 0) {
+                    showToast.error('Please select at least one document type');
+                    return;
+                  }
+                  if (!downloadPassword) {
+                    showToast.error('Please enter your password');
+                    return;
+                  }
+                  
+                  setDownloading(true);
+                  try {
+                    const response = await driverAPI.downloadDocuments({
+                      operator_ids: selectedOperatorIds,
+                      document_types: selectedDocTypes,
+                      password: downloadPassword,
+                    });
+                    
+                    // Create download link
+                    const blob = new Blob([response.data], { type: 'application/zip' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `FleetShield_Documents_${new Date().toISOString().split('T')[0]}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showToast.success('Documents downloaded successfully');
+                    setShowDownloadModal(false);
+                  } catch (error: any) {
+                    showToast.error(error.response?.data?.detail || 'Failed to download documents');
+                  } finally {
+                    setDownloading(false);
+                  }
+                }}
+                disabled={downloading || selectedOperatorIds.length === 0 || selectedDocTypes.length === 0 || !downloadPassword}
+                className="flex-1 py-2.5 bg-cyan-500 hover:bg-cyan-600 disabled:bg-cyan-500/50 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+              >
+                {downloading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download ZIP
+                  </>
+                )}
               </button>
             </div>
           </div>

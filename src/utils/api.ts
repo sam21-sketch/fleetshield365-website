@@ -55,6 +55,9 @@ export const driverAPI = {
     api.post(`/drivers/${id}/license-photos/view`, { password }),
   deleteLicensePhotos: (id: string) => api.delete(`/drivers/${id}/license-photos`),
   hasLicensePhotos: (id: string) => api.get(`/drivers/${id}/has-license-photos`),
+  // Download documents (Owner only)
+  downloadDocuments: (data: { operator_ids: string[]; document_types: string[]; password: string }) =>
+    api.post('/drivers/download-documents', data, { responseType: 'blob' }),
 };
 
 export const inspectionAPI = {
