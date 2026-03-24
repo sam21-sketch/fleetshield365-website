@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import SlidePanel from './SlidePanel';
+import { formatDateTimeAU } from '../utils/dateUtils';
 import { 
   CheckCircle, 
   XCircle, 
@@ -64,7 +65,7 @@ const InspectionDetails: React.FC<InspectionDetailsProps> = ({ isOpen, onClose, 
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleString();
+    return formatDateTimeAU(dateString);
   };
 
   // Mock checklist items if not provided
@@ -205,15 +206,30 @@ const InspectionDetails: React.FC<InspectionDetailsProps> = ({ isOpen, onClose, 
             <h3 className={`font-semibold ${textPrimary} mb-2 flex items-center gap-2`}>
               <Image className="w-4 h-4" /> Photos ({inspection.photos.length})
             </h3>
-            <div className="grid grid-cols-3 gap-2">
-              {inspection.photos.map((photo, index) => (
-                <img 
-                  key={index}
-                  src={photo} 
-                  alt={`Inspection photo ${index + 1}`}
-                  className="rounded-lg w-full h-24 object-cover"
-                />
-              ))}
+            <div className="grid grid-cols-2 gap-3">
+              {inspection.photos.map((photo: any, index: number) => {
+                // Handle both formats: string or object with base64_data
+                const photoSrc = typeof photo === 'string' 
+                  ? photo 
+                  : photo.base64_data?.startsWith('data:') 
+                    ? photo.base64_data 
+                    : `data:image/jpeg;base64,${photo.base64_data}`;
+                const photoType = typeof photo === 'object' ? photo.photo_type : null;
+                
+                return (
+                  <div key={index} className={`${cardBg} rounded-lg p-2`}>
+                    {photoType && (
+                      <p className={`text-xs ${textSecondary} mb-1 capitalize`}>{photoType.replace(/_/g, ' ')}</p>
+                    )}
+                    <img 
+                      src={photoSrc} 
+                      alt={`Inspection photo ${index + 1}`}
+                      className="rounded-lg w-full h-32 object-cover cursor-pointer hover:opacity-90 transition"
+                      onClick={() => window.open(photoSrc, '_blank')}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

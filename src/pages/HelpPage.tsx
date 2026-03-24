@@ -4,6 +4,7 @@ import { api } from '../utils/api';
 import { showToast } from '../components/Toast';
 import { SkeletonCard } from '../components/Skeleton';
 import SlidePanel from '../components/SlidePanel';
+import { formatDateTimeAU } from '../utils/dateUtils';
 import { 
   HelpCircle, 
   ChevronDown, 
@@ -367,7 +368,7 @@ const HelpPage: React.FC = () => {
                           {request.user_name}
                         </span>
                         <span>
-                          {new Date(request.created_at).toLocaleDateString()}
+                          {formatDateTimeAU(request.created_at)}
                         </span>
                       </div>
                     </div>
@@ -559,9 +560,9 @@ const HelpPage: React.FC = () => {
             
             {/* Timestamps */}
             <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              <p>Created: {new Date(selectedRequest.created_at).toLocaleString()}</p>
+              <p>Created: {formatDateTimeAU(selectedRequest.created_at)}</p>
               {selectedRequest.resolved_at && (
-                <p>Resolved: {new Date(selectedRequest.resolved_at).toLocaleString()}</p>
+                <p>Resolved: {formatDateTimeAU(selectedRequest.resolved_at)}</p>
               )}
             </div>
           </div>
